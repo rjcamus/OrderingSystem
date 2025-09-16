@@ -52,11 +52,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from django.utils.timezone import localdate
 from django.db.models import F
-
-
-# Define your email settings
-EMAIL_ADDRESS = "tupclaboratory@gmail.com"
-EMAIL_PASSWORD = "wrxx wlxh dlkn gony"
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings as django_settings
 
 @csrf_exempt
 def toggle_shop_status(request):
@@ -261,24 +258,18 @@ def send_order_status_email(recipient_email, order_code, status, orders, rejecti
     </html>
     """
 
-    # Send the email
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = recipient_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'html'))
-
     try:
-        # Send the email via Gmail's SMTP server
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body="This is an HTML email. Please use an HTML-compatible client.",
+            from_email=django_settings.EMAIL_HOST_USER,
+            to=[recipient_email],
+        )
+        email.attach_alternative(body, "text/html")
+        email.send()
         print(f"✅ Email sent to {recipient_email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
-
 
 @csrf_exempt
 def update_order_status(request):
@@ -556,20 +547,14 @@ def send_email_notification(recipient_email, status, order_code, orders):
     </html>
     """
 
-    # Send the email with the message and subject
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = recipient_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'html'))
-
     try:
-        # Send the email via Gmail's SMTP server
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        email = EmailMultiAlternatives(
+            subject=subject,
+            from_email=django_settings.EMAIL_HOST_USER,
+            to=[recipient_email],
+        )
+        email.attach_alternative(body, "text/html")
+        email.send()
         print(f"✅ Email sent to {recipient_email}")
     except Exception as e:
         print(f"❌ Failed to send email to {recipient_email}: {str(e)}")
@@ -1334,11 +1319,11 @@ def force_change(request):
            or not re.search(r'[^A-Za-z0-9]', new_password):
 
             messages.error(request, "Password must be at least 8 characters long and include letters, numbers, and special characters.")
-            return redirect('force_change')  # Redirect back to the same page
+            return redirect('force_change')
 
         # Update credentials
         owner.email = new_email
-        owner.password = new_password  # ⚠️ You might want to hash this
+        owner.password = new_password 
         owner.first_login = False
         owner.status = 'not verified'
 
@@ -1351,40 +1336,28 @@ def force_change(request):
             f"/verify-email/?{urlencode({'token': verification_token})}"
         )
 
-        # Send verification email
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = new_email
-        msg['Subject'] = "Verify Your Updated Email Address"
-
-        body = f"""
+        # Email content
+        subject = "Verify Your Updated Email Address"
+        text_content = f"Please verify your email by visiting: {verify_url}"
+        html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;">
-                <!-- Outer Container with Background -->
                 <div style="background-color: #f4f4f4; padding: 40px 0;">
-                    <!-- Centered Content Box -->
                     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); padding: 40px 20px; border: 1px solid #e0e0e0;">
-                        <!-- Header Section -->
                         <div style="text-align: center;">
                             <h2 style="color: #4CAF50; font-size: 32px; font-weight: bold;">Email Verification</h2>
                             <p style="color: #555555; font-size: 16px; line-height: 1.5; margin-top: 10px;">
                                 You have updated your email. Please verify it to activate your account:
                             </p>
                         </div>
-
-                        <!-- Call-to-Action Button -->
                         <div style="text-align: center; margin-top: 30px;">
-                            <a href="{verify_url}" style="padding: 15px 30px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s;">
+                            <a href="{verify_url}" style="padding: 15px 30px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block;">
                                 VERIFY EMAIL
                             </a>
                         </div>
-
-                        <!-- Disclaimer Section -->
                         <p style="text-align: center; font-size: 14px; color: #888888; margin-top: 20px;">
                             If you did not request this change, please ignore this email.
                         </p>
-
-                        <!-- Footer Section: Online Ordering System -->
                         <footer style="margin-top: 40px; text-align: center; font-size: 14px; color: #888888; padding: 10px 0; border-top: 2px solid #e0e0e0;">
                             <p style="color: #333333;">Online Ordering System</p>
                         </footer>
@@ -1394,12 +1367,11 @@ def force_change(request):
         </html>
         """
 
-        msg.attach(MIMEText(body, 'html'))
-
+        # Send email using Django
         try:
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-                server.sendmail(EMAIL_ADDRESS, new_email, msg.as_string())
+            email = EmailMultiAlternatives(subject, text_content, django_settings.EMAIL_HOST_USER, [new_email])
+            email.attach_alternative(html_content, "text/html")
+            email.send()
         except Exception as e:
             messages.error(request, f"Failed to send verification email: {e}")
             return redirect('login')
@@ -1408,7 +1380,7 @@ def force_change(request):
         return redirect('login')
 
     return render(request, 'MSMEOrderingWebApp/forcechange.html', {
-        'owner': owner  # Pass owner to display email in the template
+        'owner': owner
     })
 
 def login_view(request):
@@ -1692,6 +1664,7 @@ def register_user(request):
             f"/verify-email/?{urlencode({'token': verification_token})}"
         )
 
+        # Email body
         body = f"""
         <html>
         <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5;">
@@ -1781,22 +1754,22 @@ def register_user(request):
     </html>
     """
 
-        # Setup the email
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = form_data["email"]
-        msg['Subject'] = "Email Verification"
-        msg.attach(MIMEText(body, 'html'))
-
+        # Send email using Django
         try:
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-                server.sendmail(EMAIL_ADDRESS, form_data["email"], msg.as_string())
+            email = EmailMultiAlternatives(
+                "Email Verification",
+                "Please verify your email using this link: " + verification_url,
+                django_settings.EMAIL_HOST_USER,
+                [form_data["email"]]
+            )
+            email.attach_alternative(body, "text/html")
+            email.send()
         except Exception as e:
             print(f"Error sending email: {e}")
             return render(request, 'MSMEOrderingWebApp/register_user.html', {
                 "error": "Failed to send verification email.",
-                "customization": customization
+                "customization": customization,
+                "business": business
             })
 
         # Redirect to login after successful registration
@@ -3891,12 +3864,7 @@ def create_staff_account(request):
             f"/verify-email/?{urlencode({'token': verification_token})}"
         )
 
-        # ✅ Prepare email
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = email
-        msg['Subject'] = "Verify Your Email Address"
-
+        # ✅ Prepare email body
         body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px 0;">
@@ -3912,18 +3880,24 @@ def create_staff_account(request):
         </html>
         """
 
-        msg.attach(MIMEText(body, 'html'))
-
-        # ✅ Send the email
         try:
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-                server.sendmail(EMAIL_ADDRESS, email, msg.as_string())
+            # ✅ Use Django email system
+            email_message = EmailMultiAlternatives(
+                subject="Verify Your Email Address",
+                body="Please verify your email by clicking the link provided.",  # fallback text
+                from_email=django_settings.EMAIL_HOST_USER,
+                to=[email],
+            )
+            email_message.attach_alternative(body, "text/html")
+            email_message.send()
         except Exception as e:
             messages.error(request, f"Failed to send verification email: {e}")
             return redirect('users')
 
-        messages.success(request, f"{role.capitalize()} account created successfully. Please verify your email to activate the account.")
+        messages.success(
+            request,
+            f"{role.capitalize()} account created successfully. Please verify your email to activate the account."
+        )
         return redirect('users')
 
     return redirect('users')
@@ -5238,60 +5212,75 @@ def forgot_password(request):
                 defaults={'otp': otp_code, 'created_at': now()}
             )
 
+            from django.core.mail import EmailMultiAlternatives
+from django.conf import settings as django_settings
+from django.http import JsonResponse
+from django.utils.timezone import now
+import random
+
+def forgot_password(request):
+    customization = get_or_create_customization()
+    if request.method == 'POST':
+        email = request.POST.get('email')
+
+        # Check if the email exists in any of the tables
+        user = None
+        if User.objects.filter(email=email).exists():
+            user = User.objects.get(email=email)
+        elif BusinessOwnerAccount.objects.filter(email=email).exists():
+            user = BusinessOwnerAccount.objects.get(email=email)
+        elif StaffAccount.objects.filter(email=email).exists():  # ✅ Added Staff check
+            user = StaffAccount.objects.get(email=email)
+
+        if user:
+            otp_code = str(random.randint(100000, 999999))  # store as string
+            otp, created = OTP.objects.update_or_create(
+                email=email,
+                defaults={'otp': otp_code, 'created_at': now()}
+            )
+
+            # ✅ Prepare HTML body
+            body = f"""
+            <html>
+            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5; color: #333;">
+                <div style="width: 100%; height: 100%; background-color: #f5f5f5; padding: 40px 0;">
+                    <table align="center" width="600" style="border-collapse: collapse; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin: 0 auto;">
+                        <tr>
+                            <td align="center" style="padding: 40px;  background: linear-gradient(135deg, {customization.primary_color} 0%, {customization.accent_color} 100%); border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                                <h1 style="font-size: 28px; font-weight: bold; color: {customization.button_text_color}; margin: 0;">
+                                    Password Reset Request
+                                </h1>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 30px; text-align: center; font-size: 18px; line-height: 1.6; color: #555;">
+                                <p style="margin-bottom: 10px;">To reset your password, use the OTP below:</p>
+                                <div style="font-size: 36px; font-weight: 800; color:{customization.primary_color}; margin-bottom: 20px">
+                                    {otp_code}
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 20px; background-color: #f5f5f5; text-align: center; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                <p style="font-size: 14px; color: #888; margin: 0;">If you didn't request a password reset, please ignore this email.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </body>
+            </html>
+            """
+
             try:
-                # Use SSL instead of STARTTLS (recommended for Gmail)
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                    server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-
-                    msg = MIMEMultipart()
-                    msg['From'] = EMAIL_ADDRESS
-                    msg['To'] = email
-                    msg['Subject'] = 'Your OTP for Password Reset'
-
-                    body = f"""
-                    <html>
-                    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5; color: #333;">
-
-                        <!-- Main Container -->
-                        <div style="width: 100%; height: 100%; background-color: #f5f5f5; padding: 40px 0;">
-
-                            <!-- Email Content Box -->
-                            <table align="center" width="600" style="border-collapse: collapse; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin: 0 auto;">
-                                
-                                <!-- Header Section -->
-                                <tr>
-                                    <td align="center" style="padding: 40px;  background: linear-gradient(135deg, {customization.primary_color} 0%, {customization.accent_color} 100%); border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                                        <h1 style="font-size: 28px; font-weight: bold; color: {customization.button_text_color}; margin: 0;">
-                                            Password Reset Request
-                                        </h1>
-                                    </td>
-                                </tr>
-
-                                <!-- Body Section -->
-                                <tr>
-                                    <td style="padding: 30px; text-align: center; font-size: 18px; line-height: 1.6; color: #555;">
-                                        <p style="margin-bottom: 10px;">To reset your password, use the OTP below:</p>
-
-                                        <!-- OTP Code Display -->
-                                        <div style="font-size: 36px; font-weight: 800; color:{customization.primary_color}; margin-bottom: 20px">
-                                            {otp_code}
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- Footer Section -->
-                                <tr>
-                                    <td style="padding: 20px; background-color: #f5f5f5; text-align: center; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
-                                        <p style="font-size: 14px; color: #888; margin: 0;">If you didn't request a password reset, please ignore this email.</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                    </body>
-                </html>
-                    """
-                    msg.attach(MIMEText(body, 'html'))
-                    server.sendmail(EMAIL_ADDRESS, email, msg.as_string())
+                # ✅ Use Django email system
+                email_message = EmailMultiAlternatives(
+                    subject="Your OTP for Password Reset",
+                    body=f"Your OTP is {otp_code}",  # plain text fallback
+                    from_email=django_settings.EMAIL_HOST_USER,
+                    to=[email],
+                )
+                email_message.attach_alternative(body, "text/html")
+                email_message.send()
 
                 return JsonResponse({'status': 'success', 'message': 'OTP sent to your email.'})
 
