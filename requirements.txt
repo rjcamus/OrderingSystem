@@ -55,3 +55,4 @@ psycopg2-binary
 gunicorn>=21.2
 uvicorn>=0.23
 channels_redis
+uvicorn[standard]
