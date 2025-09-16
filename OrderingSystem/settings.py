@@ -15,7 +15,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
-    "orderingsystem-ctpv.onrender.com",  # your Render URL
+    "orderingsystem-1g15.onrender.com",  # your Render URL
 ]
 
 # -------------------------
