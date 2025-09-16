@@ -133,3 +133,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # Primary Key
 # -------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://orderingsystem-ctpv.onrender.com",
+]
