@@ -12,9 +12,10 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
-    ".onrender.com",  # your Render domain
     "localhost",
     "127.0.0.1",
+    "0.0.0.0",
+    "orderingsystem-ctpv.onrender.com",  # your Render URL
 ]
 
 # -------------------------
