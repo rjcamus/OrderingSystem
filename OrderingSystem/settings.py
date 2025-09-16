@@ -94,7 +94,7 @@ DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv(
             "DATABASE_URL",
-            "postgresql://orderingsystemdb_u2u5_user:U0zGjDD2aBWyBDctr4typC1yKK4daj9C@dpg-d34gv23uibrs73ah606g-a/orderingsystemdb_u2u5"  # local fallback
+            "postgresql://orderingsystemdb_artv_user:3SxXbWxMraWRQLg2SnsOvnk5d4OwGqV7@dpg-d34j1our433s73clk7sg-a/orderingsystemdb_artv"  # local fallback
         ),
         conn_max_age=600,
     )
