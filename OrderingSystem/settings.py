@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -------------------------
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key")
 
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = [
     "localhost",
